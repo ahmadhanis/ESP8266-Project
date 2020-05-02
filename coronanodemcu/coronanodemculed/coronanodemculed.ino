@@ -3,8 +3,8 @@
 #include <ESP8266HTTPClient.h>
 #include <Adafruit_GFX.h>
 #include <Max72xxPanel.h>
-#define WIFI_SSID "your wifi ssid"
-#define WIFI_PASSWORD "your wifi password"
+#define WIFI_SSID "your-wifi-ssid"
+#define WIFI_PASSWORD "wifi-password"
 #include <ArduinoJson.h>
 int pinCS = D3; // Attach CS to this pin, DIN to MOSI and CLK to SCK (cf http://arduino.cc/en/Reference/SPI )
 int numberOfHorizontalDisplays = 4;
@@ -14,7 +14,8 @@ int spacer = 1;
 int width  = 5 + spacer; // The font width is 5 pixels
 String SITE_WIDTH =  "1000";
 Max72xxPanel matrix = Max72xxPanel(pinCS, numberOfHorizontalDisplays, numberOfVerticalDisplays);
-
+int count = 0;
+String msj;
 
 void setup() {
   // put your setup code here, to run once:
@@ -24,8 +25,8 @@ void setup() {
   matrix.setRotation(0, 1);  // The first display is position upside down
   matrix.setRotation(1, 1);  // The first display is position upside down
   matrix.setRotation(2, 1);  // The first display is position upside down
-  matrix.setRotation(3, 1);  
-  
+  matrix.setRotation(3, 1);
+
   // connect to wifi.
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   Serial.print("connecting");
@@ -43,10 +44,17 @@ void setup() {
 
 void loop() {
   // put your main code here, to run repeatedly:
-  checkCorona("Malaysia");
-  delay(10000);
-  checkCorona("World");
-  delay(10000);
+  if (count == 0 ) {
+    checkCorona("Malaysia");
+    count++;
+  }
+  if (count < 100) {
+    drawScreenInfo(msj);
+    count++;
+  } else {
+    checkCorona("Malaysia");
+  }
+
 }
 
 void checkCorona(String country) {
@@ -60,11 +68,11 @@ void checkCorona(String country) {
     int httpCode = http.GET();
     Serial.println(httpCode);
     payload = http.getString();
-      Serial.println(payload);
+    Serial.println(payload);
     //Check the returning code
     if (httpCode > 0) {
       // Get the request response payload
-      
+
       int httpCode = http.GET();
       if (httpCode > 0) {
         const size_t bufferSize = JSON_OBJECT_SIZE(2) + JSON_OBJECT_SIZE(3) + JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(8) + 370;
@@ -84,7 +92,7 @@ void checkCorona(String country) {
         Serial.println(recovered);
         Serial.println(active);
         Serial.println(critical);
-        String msj = "NEGARA:"+country+"-JUMLAH KES:"+cases+"-KES HARI INI:"+todaycases+"-JUMLAH KEMATIAN:"+deaths+"-KEMATIAN HARI INI:"+todayDeaths+"-PULIH:"+recovered+"-KES AKTIF:"+active+"-KRITIKAL:"+critical;
+        msj = "Negara:" + country + ", Jumlah Kes:" + cases + ", Kes hari ini:" + todaycases + ", Jumlah kematian:" + deaths + ", Kematian hari ini:" + todayDeaths + ", Pulih:" + recovered + ", Kes aktif:" + active + ", Kritikal:" + critical;
         drawScreenInfo(msj);
       }
     }
@@ -95,7 +103,7 @@ void checkCorona(String country) {
 
 void drawScreenInfo(String message)
 {
-    for ( int i = 0 ; i < width * message.length() + matrix.width() - spacer; i++ ) {
+  for ( int i = 0 ; i < width * message.length() + matrix.width() - spacer; i++ ) {
     //matrix.fillScreen(LOW);
     int letter = i / width;
     int x = (matrix.width() - 1) - i % width;
