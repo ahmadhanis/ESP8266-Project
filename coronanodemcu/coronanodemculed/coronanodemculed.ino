@@ -3,7 +3,7 @@
 #include <ESP8266HTTPClient.h>
 #include <Adafruit_GFX.h>
 #include <Max72xxPanel.h>
-#define WIFI_SSID "your-wifi-ssid"
+#define WIFI_SSID "wifi-ssid"
 #define WIFI_PASSWORD "wifi-password"
 #include <ArduinoJson.h>
 int pinCS = D3; // Attach CS to this pin, DIN to MOSI and CLK to SCK (cf http://arduino.cc/en/Reference/SPI )
@@ -40,20 +40,19 @@ void setup() {
   Serial.println();
   Serial.print("connected: ");
   Serial.println(WiFi.localIP());
+  checkCorona("Malaysia");
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
-  if (count == 0 ) {
-    checkCorona("Malaysia");
-    count++;
-  }
-  if (count < 100) {
+  Serial.println(count);
+  if (count < 5) {
     drawScreenInfo(msj);
-    count++;
   } else {
+    count=0;
     checkCorona("Malaysia");
   }
+  count++;
 
 }
 
@@ -85,15 +84,8 @@ void checkCorona(String country) {
         const char* recovered = root["recovered"];
         const char* active = root["active"];
         const char* critical = root["critical"];
-        Serial.println(cases);
-        Serial.println(todaycases);
-        Serial.println(deaths);
-        Serial.println(todayDeaths);
-        Serial.println(recovered);
-        Serial.println(active);
-        Serial.println(critical);
-        msj = "Negara:" + country + ", Jumlah Kes:" + cases + ", Kes hari ini:" + todaycases + ", Jumlah kematian:" + deaths + ", Kematian hari ini:" + todayDeaths + ", Pulih:" + recovered + ", Kes aktif:" + active + ", Kritikal:" + critical;
-        drawScreenInfo(msj);
+        msj = "COVID-19 Corona Tracker - Negara:" + country + ", Jumlah kes:" + cases + ", Kes hari ini:" + todaycases + ", Jumlah kematian:" + deaths + ", Kematian hari ini:" + todayDeaths + ", Pulih:" + recovered + ", Kes aktif:" + active + ", Kritikal:" + critical;
+        drawScreenInfo("New - "+msj);
       }
     }
     http.end();
