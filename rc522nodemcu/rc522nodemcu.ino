@@ -22,17 +22,19 @@ Adafruit_MLX90614 mlx = Adafruit_MLX90614();
 #define OLED_RESET    -1  // Reset pin # (or -1 if sharing reset pin)
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
-String wifissid = "UUMWiFi_Guest";
-String wifipass = "";
+String wifissid = "slumberjer@unifi";
+String wifipass = "abcdef7812230";
 double temp = 0;
 String content = "";
 String request;
 const int MLX_addr = 0x5A;
+int buzzPin = 10;
 
 MFRC522::MIFARE_Key key;
 
 void setup() {
   Serial.begin(115200);    // Initialize serial communications
+  pinMode (buzzPin, OUTPUT) ;
   SPI.begin();           // Init SPI bus
   mfrc522.PCD_Init();    // Init MFRC522
   mlx.begin();
@@ -68,6 +70,16 @@ void setup() {
   delay(2000);
   drawScreen("WELCOME TO UUM", "SYSTEM READY", "Connected to", wifissid, "Ready...");
   delay(3000);
+  buzzer(3);
+}
+
+void buzzer(int c) {
+  for (int i = 0; i < c; i++) {
+    tone(buzzPin, 1000); // Send 1KHz sound signal...
+    delay(500);        // ...for 1 sec
+    noTone(buzzPin);     // Stop sound...
+    delay(200);
+  }
 }
 
 boolean testWifi() {
@@ -98,15 +110,15 @@ void drawScreen(String a, String b, String c, String d, String e)
   display.clearDisplay();
   display.setTextColor(WHITE);
   display.setTextSize(1);
-  display.setCursor(15,5);
+  display.setCursor(15, 5);
   display.print(a);
-  display.setCursor(0,20);
+  display.setCursor(0, 20);
   display.print(b);
-  display.setCursor(0,30);
+  display.setCursor(0, 30);
   display.print(c);
-  display.setCursor(0,40);
+  display.setCursor(0, 40);
   display.print(d);
-  display.setCursor(0,50);
+  display.setCursor(0, 50);
   display.print(e);
   display.display();
 }
@@ -116,11 +128,12 @@ void readTemp() {
   //Serial.print(mlx.readAmbientTempC());
   //Serial.print("*C\tObject = ");
   temp = mlx.readObjectTempC() + 0.98;
-  while (temp < 34){
+  while (temp < 34) {
     temp = mlx.readObjectTempC() + 0.98;
     drawScreen("WELCOME TO SOC", "TAKING TEMPERATURE", "CLOSER TO SENSOR", String(temp) + " celcius", "Reading...");
     delay(100);
   }
+  buzzer(5);
   Serial.print(temp);
   Serial.println("*C");
   Serial.println();
@@ -162,7 +175,7 @@ void loop() {
   Serial.println();
   content.toUpperCase();
   Serial.println("Card read:" + content);
-  drawScreen("WELCOME TO UUM", "REMOVE YOUR CARD ", "CARD ID IS "+content, "Prepare to take your ", "Temperature");
+  drawScreen("WELCOME TO UUM", "REMOVE YOUR CARD ", "CARD ID IS " + content, "Prepare to take your ", "Temperature");
   delay(5000);
   readTemp();
   drawScreen("WELCOME TO SOC", "", "YOUR TEMPERATURE", String(temp) + " celcius", "Completed...");
