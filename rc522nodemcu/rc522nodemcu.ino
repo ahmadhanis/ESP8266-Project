@@ -2,24 +2,33 @@
 // Created by LUIS SANTOS & RICARDO VEIGA
 // 7th of June, 2017
 
-#include "SSD1306.h" // alias for `#include "SSD1306Wire.h"`
+//#include "SSD1306.h" // alias for `#include "SSD1306Wire.h"`
 #include <Wire.h>
 #include <Adafruit_MLX90614.h>
 #include <MFRC522.h>
 #include <SPI.h>
 #include <ESP8266HTTPClient.h>
 #include <ESP8266WiFi.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
 
 #define RST_PIN 20 // RST-PIN for RC522 - RFID - SPI - Module GPIO15
 #define SS_PIN  2  // SDA-PIN for RC522 - RFID - SPI - Module GPIO2
 MFRC522 mfrc522(SS_PIN, RST_PIN);   // Create MFRC522 instance
-SSD1306 display(0x3c, 0, 10); //4-15
+//SSD1306 display(0x3c, 10, 9); //4-15
 Adafruit_MLX90614 mlx = Adafruit_MLX90614();
+#define SCREEN_WIDTH 128  // OLED display width, in pixels
+#define SCREEN_HEIGHT 64  // OLED display height, in pixels
+#define OLED_RESET    -1  // Reset pin # (or -1 if sharing reset pin)
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+
 String wifissid = "UUMWiFi_Guest";
 String wifipass = "";
 double temp = 0;
 String content = "";
 String request;
+const int MLX_addr = 0x5A;
+
 MFRC522::MIFARE_Key key;
 
 void setup() {
@@ -32,21 +41,32 @@ void setup() {
   for (byte i = 0; i < 6; i++) {
     key.keyByte[i] = 0xFF;
   }
-  //display.init();
-  //display.flipScreenVertically();
-  //drawScreen("WELCOME TO SOC", "CHECK", "Card-...", "", "Booting...");
-
-  //drawScreen("WELCOME TO SOC", "CHECK", "Card-Success", "", "Booting...");
-  delay(2000);
-  //drawScreen("WELCOME TO SOC", "CHECK", "WiFi-...", "", "Booting...");
+  Wire.begin();
+  Wire.beginTransmission(MLX_addr);
+  Wire.write(0x5B);
+  Wire.write(0);
+  Wire.endTransmission(true);
+  if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C))
+  {
+    Serial.println(F("SSD1306 allocation failed"));
+    for (;;); // Don't proceed, loop forever
+  }
+  display.display();
+  delay(2);
+  display.clearDisplay();
+  drawScreen("WELCOME TO UUM", "RFID based temperature", "recording system", "Please wait...", "Booting...");
+  delay(3000);
+  drawScreen("WELCOME TO UUM", "SETTING UP", "Connecting to ", wifissid, "Booting...");
   if (testWifi()) {
-    //drawScreen("WELCOME TO SOC", "CH", "WiFi-Success", wifissid, "Booting...");
+    drawScreen("WELCOME TO UUM", "SETTING UP", "Connected to ", wifissid, "Booting...");
+    delay(2000);
   } else {
-    //drawScreen("WELCOME TO SOC", "CHECK", "WiFi-Failed", "", "Booting...");
-    delay(3000);
+    drawScreen("WELCOME TO UUM", "SETTING UP", "Connection Failed ", wifissid, "Restarting...");
+    delay(5000);
     ESP.restart();
   }
-  //drawScreen("WELCOME TO SOC", "SYSTEM READY", "", wifissid, "Completed...");
+  delay(2000);
+  drawScreen("WELCOME TO UUM", "SYSTEM READY", "Connected to", wifissid, "Ready...");
   delay(3000);
 }
 
@@ -71,25 +91,36 @@ boolean testWifi() {
   return false;
 }
 
-//void drawScreen(String a, String b, String c, String d, String e)
-//{
-//  delay(10);
-//  display.clear();
-//  display.setTextAlignment(TEXT_ALIGN_LEFT);
-//  display.setFont(ArialMT_Plain_10);
-//  display.drawString(5, 0, a);
-//  display.drawString(5, 10, b);
-//  display.drawString(5, 20, c);
-//  display.drawString(5, 30, d);
-//  display.drawString(5, 40, e);
-//  display.display();
-//}
+void drawScreen(String a, String b, String c, String d, String e)
+{
+  display.display();
+  delay(10);
+  display.clearDisplay();
+  display.setTextColor(WHITE);
+  display.setTextSize(1);
+  display.setCursor(15,5);
+  display.print(a);
+  display.setCursor(0,20);
+  display.print(b);
+  display.setCursor(0,30);
+  display.print(c);
+  display.setCursor(0,40);
+  display.print(d);
+  display.setCursor(0,50);
+  display.print(e);
+  display.display();
+}
 
 void readTemp() {
   Serial.print("Object = ");
   //Serial.print(mlx.readAmbientTempC());
   //Serial.print("*C\tObject = ");
-  temp = mlx.readObjectTempC();
+  temp = mlx.readObjectTempC() + 0.98;
+  while (temp < 34){
+    temp = mlx.readObjectTempC() + 0.98;
+    drawScreen("WELCOME TO SOC", "TAKING TEMPERATURE", "CLOSER TO SENSOR", String(temp) + " celcius", "Reading...");
+    delay(100);
+  }
   Serial.print(temp);
   Serial.println("*C");
   Serial.println();
@@ -106,7 +137,7 @@ void dump_byte_array(byte *buffer, byte bufferSize) {
 
 void loop() {
   // Look for new cards
-  //  drawScreen("WELCOME TO SOC", "", "TOUCH YOUR CARD", "", "Waiting...");
+  drawScreen("WELCOME TO UUM", "PRESENT YOUR CARD", "", "", "Waiting...");
   if ( ! mfrc522.PICC_IsNewCardPresent()) {
     delay(50);
     return;
@@ -131,17 +162,14 @@ void loop() {
   Serial.println();
   content.toUpperCase();
   Serial.println("Card read:" + content);
-  //readCard();
-  //drawScreen("WELCOME TO SOC", "", "CARD ID", content, "Reading...");
-  delay(3000);
-  //drawScreen("WELCOME TO SOC", "", "TAKING TEMPERATURE", content, "Reading...");
-  delay(3000);
+  drawScreen("WELCOME TO UUM", "REMOVE YOUR CARD ", "CARD ID IS "+content, "Prepare to take your ", "Temperature");
+  delay(5000);
   readTemp();
-  //drawScreen("WELCOME TO SOC", "", "YOUR TEMPERATURE", String(temp) + " celcius", "Completed...");
+  drawScreen("WELCOME TO SOC", "", "YOUR TEMPERATURE", String(temp) + " celcius", "Completed...");
   delay(3000);
-  //drawScreen("WELCOME TO SOC", "", "UPLOADING DATA...", "", "Please wait...");
+  drawScreen("WELCOME TO SOC", "", "UPLOADING DATA...", "", "Please wait...");
   uploadData();
-  //drawScreen("WELCOME TO SOC", "", "UPLOADING DATA...", "Completed", "Please wait...");
+  drawScreen("WELCOME TO SOC", "", "UPLOADING DATA...", "Completed", "Please wait...");
   delay(3000);
 }
 
