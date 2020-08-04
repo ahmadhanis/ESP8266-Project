@@ -22,8 +22,8 @@ Adafruit_MLX90614 mlx = Adafruit_MLX90614();
 #define OLED_RESET    -1  // Reset pin # (or -1 if sharing reset pin)
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
-String wifissid = "slumberjer@unifi";
-String wifipass = "abcdef7812230";
+String wifissid = "";
+String wifipass = "";
 double temp = 0;
 String content = "";
 String request;
