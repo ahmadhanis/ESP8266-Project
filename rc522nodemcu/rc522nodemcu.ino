@@ -1,8 +1,7 @@
-// Wireless RFID Door Lock Using NodeMCU
-// Created by LUIS SANTOS & RICARDO VEIGA
-// 7th of June, 2017
+// Wireless RFID NodeMCU Temperature Recording Device
+// Created by Ahmad Hanis
+// 4/8/2020
 
-//#include "SSD1306.h" // alias for `#include "SSD1306Wire.h"`
 #include <Wire.h>
 #include <Adafruit_MLX90614.h>
 #include <MFRC522.h>
@@ -14,23 +13,22 @@
 
 #define RST_PIN 20 // RST-PIN for RC522 - RFID - SPI - Module GPIO15
 #define SS_PIN  2  // SDA-PIN for RC522 - RFID - SPI - Module GPIO2
-MFRC522 mfrc522(SS_PIN, RST_PIN);   // Create MFRC522 instance
-//SSD1306 display(0x3c, 10, 9); //4-15
-Adafruit_MLX90614 mlx = Adafruit_MLX90614();
 #define SCREEN_WIDTH 128  // OLED display width, in pixels
 #define SCREEN_HEIGHT 64  // OLED display height, in pixels
 #define OLED_RESET    -1  // Reset pin # (or -1 if sharing reset pin)
-Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
-String wifissid = "";
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+MFRC522 mfrc522(SS_PIN, RST_PIN);   // Create MFRC522 instance
+Adafruit_MLX90614 mlx = Adafruit_MLX90614();
+MFRC522::MIFARE_Key key;
+
+String wifissid = "UUMWiFi_Guest";
 String wifipass = "";
 double temp = 0;
 String content = "";
 String request;
 const int MLX_addr = 0x5A;
-int buzzPin = 10;
-
-MFRC522::MIFARE_Key key;
+int buzzPin = 3;
 
 void setup() {
   Serial.begin(115200);    // Initialize serial communications
@@ -56,26 +54,35 @@ void setup() {
   display.display();
   delay(2);
   display.clearDisplay();
-  drawScreen("WELCOME TO UUM", "RFID based temperature", "recording system", "Please wait...", "Booting...");
+  drawScreen("WELCOME TO UUM", "      RFID TRS", "", "Please wait...", "Booting...");
   delay(3000);
-  drawScreen("WELCOME TO UUM", "SETTING UP", "Connecting to ", wifissid, "Booting...");
+  drawScreen("WELCOME TO UUM", "     SETTING UP", "Connecting to ", wifissid, "Booting...");
   if (testWifi()) {
-    drawScreen("WELCOME TO UUM", "SETTING UP", "Connected to ", wifissid, "Booting...");
+    drawScreen("WELCOME TO UUM", "     SETTING UP", "Connected to ", wifissid, "Booting...");
     delay(2000);
   } else {
-    drawScreen("WELCOME TO UUM", "SETTING UP", "Connection Failed ", wifissid, "Restarting...");
-    delay(5000);
-    ESP.restart();
+    drawScreen("WELCOME TO UUM", "     SETTING UP", "Retry...", wifissid, "Booting...");
+    delay(2000);
+    wifissid = "";
+    wifipass = "";
+    if (testWifi()) {
+      drawScreen("WELCOME TO UUM", "     SETTING UP", "Connected to ", wifissid, "Booting...");
+    } else {
+      drawScreen("WELCOME TO UUM", "     SETTING UP", "Connection Failed ", wifissid, "Restarting...");
+      delay(4000);
+      ESP.restart();
+
+    }
   }
   delay(2000);
-  drawScreen("WELCOME TO UUM", "SYSTEM READY", "Connected to", wifissid, "Ready...");
+  drawScreen("WELCOME TO UUM", "    SYSTEM READY", "Connected to ", wifissid, "Ready...");
   delay(3000);
   buzzer(3);
 }
 
 void buzzer(int c) {
   for (int i = 0; i < c; i++) {
-    tone(buzzPin, 1000); // Send 1KHz sound signal...
+    tone(buzzPin, 1000, 400); // Send 1KHz sound signal...
     delay(500);        // ...for 1 sec
     noTone(buzzPin);     // Stop sound...
     delay(200);
@@ -130,10 +137,9 @@ void readTemp() {
   temp = mlx.readObjectTempC() + 0.98;
   while (temp < 34) {
     temp = mlx.readObjectTempC() + 0.98;
-    drawScreen("WELCOME TO SOC", "TAKING TEMPERATURE", "CLOSER TO SENSOR", String(temp) + " celcius", "Reading...");
+    drawScreen("WELCOME TO UUM", "READING TEMP", "CLOSER TO SENSOR", String(temp) + " Celcius", "Reading...");
     delay(100);
   }
-  buzzer(5);
   Serial.print(temp);
   Serial.println("*C");
   Serial.println();
@@ -171,19 +177,23 @@ void loop() {
     content.concat(String(mfrc522.uid.uidByte[i] < 0x10 ? "0" : ""));
     content.concat(String(mfrc522.uid.uidByte[i], HEX));
   }
-
+  buzzer(1);
   Serial.println();
   content.toUpperCase();
   Serial.println("Card read:" + content);
-  drawScreen("WELCOME TO UUM", "REMOVE YOUR CARD ", "CARD ID IS " + content, "Prepare to take your ", "Temperature");
-  delay(5000);
+  drawScreen("WELCOME TO UUM", "REMOVE YOUR CARD", "CARD ID IS " + content, "Close to sensor", "Waiting..");
+  buzzer(2);
+  delay(3000);
   readTemp();
-  drawScreen("WELCOME TO SOC", "", "YOUR TEMPERATURE", String(temp) + " celcius", "Completed...");
-  delay(3000);
-  drawScreen("WELCOME TO SOC", "", "UPLOADING DATA...", "", "Please wait...");
+  buzzer(3);
+  drawScreen("WELCOME TO SOC", "", "YOUR TEMPERATURE", String(temp) + " Celcius", "Completed...");
+  delay(2000);
+  drawScreen("WELCOME TO SOC", "", "UPLOADING DATA...", String(temp) + " Celcius" , "Please wait...");
   uploadData();
-  drawScreen("WELCOME TO SOC", "", "UPLOADING DATA...", "Completed", "Please wait...");
+  delay(2000);
+  drawScreen("WELCOME TO SOC", "", "DATA UPLOADED", "Completed", "....  THANK YOU  ...");
   delay(3000);
+  buzzer(4);
 }
 
 void readCard() {
